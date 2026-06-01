@@ -1,0 +1,77 @@
+// ============================================================================
+// Seed Templates — Populate default template documents
+// ============================================================================
+import { connectDatabase, disconnectDatabase } from '../config/database.js';
+import { TemplateRepository } from '../repositories/template.repository.js';
+import { TEMPLATE_COLORS, TEMPLATE_TYPOGRAPHY } from '../shared/template.js';
+const TEMPLATE_DEFINITIONS = [
+    {
+        templateId: 'notion',
+        name: 'Notion Style',
+        description: 'Clean, blocky layout inspired by Notion. Monochrome with blue accents.',
+        thumbnail: '/templates/notion.png',
+        category: 'minimal',
+    },
+    {
+        templateId: 'minimal',
+        name: 'Minimal',
+        description: 'Maximum whitespace with thin typography and floating cards.',
+        thumbnail: '/templates/minimal.png',
+        category: 'minimal',
+    },
+    {
+        templateId: 'developer',
+        name: 'Developer',
+        description: 'Terminal-inspired with monospace headings and green accents.',
+        thumbnail: '/templates/developer.png',
+        category: 'professional',
+    },
+    {
+        templateId: 'modern',
+        name: 'Modern Professional',
+        description: 'Bold headings with gradient accents and card-based layout.',
+        thumbnail: '/templates/modern.png',
+        category: 'professional',
+    },
+    {
+        templateId: 'creative',
+        name: 'Creative Portfolio',
+        description: 'Asymmetric grids with serif headings and warm amber accents.',
+        thumbnail: '/templates/creative.png',
+        category: 'creative',
+    },
+];
+function buildDefaultDesign(templateId) {
+    return {
+        colors: TEMPLATE_COLORS[templateId].light,
+        typography: TEMPLATE_TYPOGRAPHY[templateId],
+        spacing: {
+            sectionPadding: 64,
+            contentMaxWidth: templateId === 'creative' ? 1100 : 960,
+            cardGap: 24,
+        },
+        borderShadow: {
+            borderRadius: templateId === 'notion' ? 8 : 12,
+            borderWidth: 1,
+            shadowIntensity: templateId === 'minimal' ? 'subtle' : 'medium',
+        },
+        animations: {},
+    };
+}
+async function seed() {
+    await connectDatabase();
+    for (const def of TEMPLATE_DEFINITIONS) {
+        await TemplateRepository.upsertByTemplateId(def.templateId, {
+            ...def,
+            defaultDesign: buildDefaultDesign(def.templateId),
+            isActive: true,
+        });
+        console.log(`✅ Seeded template: ${def.name}`);
+    }
+    console.log('\n🎉 Template seeding complete');
+    await disconnectDatabase();
+}
+seed().catch((err) => {
+    console.error('❌ Seed failed:', err);
+    process.exit(1);
+});

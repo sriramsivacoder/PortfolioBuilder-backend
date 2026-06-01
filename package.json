@@ -1,0 +1,26 @@
+{
+  "name": "@portfolioforge/backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/server.js",
+    "build": "node --check src/server.js",
+    "start": "node src/server.js",
+    "seed": "node src/scripts/seed-templates.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0",
+    "cloudinary": "^2.5.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "mammoth": "^1.12.0",
+    "mongoose": "^9.6.0",
+    "multer": "^2.1.0",
+    "octokit": "^5.0.0",
+    "pdf-parse": "^2.4.0",
+    "uuid": "^11.1.0",
+    "zod": "^4.4.0"
+  }
+}
