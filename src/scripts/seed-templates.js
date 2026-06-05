@@ -40,6 +40,27 @@ const TEMPLATE_DEFINITIONS = [
         thumbnail: '/templates/creative.png',
         category: 'creative',
     },
+    {
+        templateId: 'editorial',
+        name: 'Editorial Split',
+        description: 'Magazine-like spacing, refined contrast, and structured content flow.',
+        thumbnail: '/templates/editorial.png',
+        category: 'creative',
+    },
+    {
+        templateId: 'neon',
+        name: 'Neon Lab',
+        description: 'High-contrast tech style with vivid cyan accents and sharp panels.',
+        thumbnail: '/templates/neon.png',
+        category: 'developer',
+    },
+    {
+        templateId: 'executive',
+        name: 'Executive Brief',
+        description: 'Premium resume-style portfolio with quiet luxury and dense readability.',
+        thumbnail: '/templates/executive.png',
+        category: 'professional',
+    },
 ];
 function buildDefaultDesign(templateId) {
     return {
@@ -47,13 +68,13 @@ function buildDefaultDesign(templateId) {
         typography: TEMPLATE_TYPOGRAPHY[templateId],
         spacing: {
             sectionPadding: 64,
-            contentMaxWidth: templateId === 'creative' ? 1100 : 960,
-            cardGap: 24,
+            contentMaxWidth: templateId === 'creative' || templateId === 'editorial' ? 1100 : templateId === 'executive' ? 1040 : 960,
+            cardGap: templateId === 'executive' ? 18 : 24,
         },
         borderShadow: {
-            borderRadius: templateId === 'notion' ? 8 : 12,
-            borderWidth: 1,
-            shadowIntensity: templateId === 'minimal' ? 'subtle' : 'medium',
+            borderRadius: templateId === 'notion' || templateId === 'neon' ? 8 : templateId === 'executive' ? 6 : 12,
+            borderWidth: templateId === 'neon' ? 2 : 1,
+            shadowIntensity: templateId === 'minimal' || templateId === 'executive' ? 'subtle' : 'medium',
         },
         animations: {},
     };

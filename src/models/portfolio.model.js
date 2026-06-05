@@ -145,9 +145,16 @@ const BorderShadowSettingsSchema = new Schema({
     shadowIntensity: { type: String, enum: ['none', 'subtle', 'medium', 'strong'], required: true },
 }, { _id: false });
 const SectionAnimationSchema = new Schema({
-    type: { type: String, enum: ['fade', 'slide', 'scale', 'none'], required: true },
+    type: {
+        type: String,
+        enum: ['fade', 'rise', 'drop', 'slide', 'slideLeft', 'slideRight', 'scale', 'zoomBlur', 'flip', 'tilt', 'clip', 'blur', 'none'],
+        required: true,
+    },
     duration: { type: Number },
     delay: { type: Number },
+    distance: { type: Number },
+    easing: { type: String, enum: ['smooth', 'spring', 'snappy', 'luxury'] },
+    repeatOnScroll: { type: Boolean },
 }, { _id: false });
 const DesignSettingsSchema = new Schema({
     colors: { type: ColorSettingsSchema, required: true },
@@ -166,7 +173,7 @@ const SectionConfigSchema = new Schema({
     title: { type: String, required: true },
     visible: { type: Boolean, default: true },
     order: { type: Number, required: true },
-    animation: { type: SectionAnimationSchema, default: { type: 'fade', duration: 300, delay: 0 } },
+    animation: { type: SectionAnimationSchema, default: { type: 'rise', duration: 650, delay: 0, distance: 28, easing: 'smooth', repeatOnScroll: false } },
 }, { _id: false });
 const PortfolioSchema = new Schema({
     sessionId: { type: String, required: true, index: true },

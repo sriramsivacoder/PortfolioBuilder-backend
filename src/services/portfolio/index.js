@@ -28,8 +28,107 @@ function createDefaultSections() {
         title: s.title,
         visible: true,
         order: index,
-        animation: { type: 'fade', duration: 300, delay: 0 },
+        animation: { type: 'rise', duration: 650, delay: index * 60, distance: 28, easing: 'smooth', repeatOnScroll: false },
     }));
+}
+function createEmptySourceData(portfolio) {
+    const github = portfolio.githubData;
+    const linkedin = portfolio.linkedinData;
+    const githubSkills = github?.languages
+        ? Object.keys(github.languages).filter(Boolean)
+        : [];
+    const githubProjects = github?.repos?.slice(0, 6).map((repo, index) => ({
+        id: `github-project-${index + 1}`,
+        title: repo.name,
+        description: repo.description ?? `A public ${repo.language ?? 'software'} project from GitHub.`,
+        technologies: [repo.language, ...(repo.topics ?? [])].filter(Boolean),
+        url: repo.url,
+        githubUrl: repo.url,
+        featured: index < 3,
+        stars: repo.stars ?? 0,
+    })) ?? [];
+    return {
+        name: github?.username ?? 'Portfolio Owner',
+        headline: linkedin?.headline ?? github?.bio ?? 'Professional Portfolio',
+        summary: linkedin?.summary ?? github?.bio ?? '',
+        skills: githubSkills.length
+            ? [{ id: 'skill-cat-github', category: 'GitHub Languages', skills: githubSkills }]
+            : [],
+        education: [],
+        experience: [],
+        projects: githubProjects,
+        certifications: [],
+        contact: {
+            github: github?.profileUrl,
+            linkedin: linkedin?.url,
+        },
+    };
+}
+function buildSourceData(portfolio) {
+    const base = portfolio.resumeData ? portfolio.resumeData.toObject?.() ?? portfolio.resumeData : createEmptySourceData(portfolio);
+    const github = portfolio.githubData;
+    const linkedin = portfolio.linkedinData;
+    const githubSkills = github?.languages ? Object.keys(github.languages).filter(Boolean) : [];
+    const existingSkills = Array.isArray(base.skills) ? base.skills : [];
+    const skills = existingSkills.length || !githubSkills.length
+        ? existingSkills
+        : [{ id: 'skill-cat-github', category: 'GitHub Languages', skills: githubSkills }];
+    const githubProjects = github?.repos?.slice(0, 6).map((repo, index) => ({
+        id: `github-project-${index + 1}`,
+        title: repo.name,
+        description: repo.description ?? `A public ${repo.language ?? 'software'} project from GitHub.`,
+        technologies: [repo.language, ...(repo.topics ?? [])].filter(Boolean),
+        url: repo.url,
+        githubUrl: repo.url,
+        featured: index < 3,
+        stars: repo.stars ?? 0,
+    })) ?? [];
+    const projects = Array.isArray(base.projects) && base.projects.length ? base.projects : githubProjects;
+    return {
+        name: base.name || github?.username || 'Portfolio Owner',
+        headline: base.headline || linkedin?.headline || github?.bio || 'Professional Portfolio',
+        summary: base.summary || linkedin?.summary || github?.bio || '',
+        skills,
+        education: Array.isArray(base.education) ? base.education : [],
+        experience: Array.isArray(base.experience) ? base.experience : [],
+        projects,
+        certifications: Array.isArray(base.certifications) ? base.certifications : [],
+        contact: {
+            ...(base.contact ?? {}),
+            github: base.contact?.github ?? github?.profileUrl,
+            linkedin: base.contact?.linkedin ?? linkedin?.url,
+        },
+    };
+}
+function hasUsableSource(portfolio) {
+    return Boolean(portfolio.resumeData || portfolio.githubData || portfolio.linkedinData);
+}
+function createStarterContent(portfolio) {
+    const source = buildSourceData(portfolio);
+    return {
+        hero: {
+            title: source.name === 'Portfolio Owner' ? 'Your Name' : `Hi, I'm ${source.name}`,
+            subtitle: source.headline || 'Build a portfolio from resume, GitHub, LinkedIn, or manual edits.',
+            tagline: 'Ready to customize',
+            ctaText: 'View My Work',
+            ctaUrl: '#projects',
+            backgroundStyle: 'gradient',
+        },
+        about: {
+            heading: 'About Me',
+            paragraphs: [
+                source.summary || 'Use the editor to shape this portfolio around your story, skills, projects, and career goals.',
+                'You can add, remove, reorder, and animate sections without relying on a resume as the main source.',
+            ],
+            highlights: ['Editable content', 'Flexible sections', 'Modern templates', 'Publish-ready design'],
+        },
+        skills: source.skills,
+        projects: source.projects,
+        experience: source.experience,
+        education: source.education,
+        certifications: source.certifications,
+        contact: source.contact,
+    };
 }
 /**
  * Create a new portfolio for a session.
@@ -124,9 +223,6 @@ export async function enrichWithGitHub(portfolioId, githubUrl) {
 export async function generateContent(portfolioId, templateId) {
     try {
         const portfolio = await getPortfolio(portfolioId);
-        if (!portfolio.resumeData) {
-            throw new ServiceError('Resume data is required before generating content. Please upload a resume first.', 400);
-        }
         // If a template is specified, update the portfolio template and design
         if (templateId) {
             const template = await TemplateRepository.findByTemplateId(templateId);
@@ -134,8 +230,10 @@ export async function generateContent(portfolioId, templateId) {
                 await PortfolioRepository.updateTemplate(portfolioId, templateId, template.defaultDesign);
             }
         }
-        // Generate content with AI
-        const content = await generatePortfolioContent(portfolio.resumeData, portfolio.githubData, portfolio.linkedinData);
+        const sourceData = buildSourceData(portfolio);
+        const content = hasUsableSource(portfolio)
+            ? await generatePortfolioContent(sourceData, portfolio.githubData, portfolio.linkedinData)
+            : createStarterContent(portfolio);
         // Update the portfolio with generated content
         await PortfolioRepository.updateGeneratedContent(portfolioId, content);
         // Fetch the updated portfolio

@@ -44,7 +44,7 @@ const TemplateSchema = new Schema({
         required: true,
         unique: true,
         index: true,
-        enum: ['notion', 'minimal', 'developer', 'modern', 'creative'],
+        enum: ['notion', 'minimal', 'developer', 'modern', 'creative', 'editorial', 'neon', 'executive'],
     },
     name: { type: String, required: true },
     description: { type: String, required: true },
@@ -52,7 +52,7 @@ const TemplateSchema = new Schema({
     category: {
         type: String,
         required: true,
-        enum: ['minimal', 'professional', 'creative'],
+        enum: ['minimal', 'professional', 'creative', 'developer'],
     },
     defaultDesign: { type: DesignSettingsSchema, required: true },
     isActive: { type: Boolean, default: true },

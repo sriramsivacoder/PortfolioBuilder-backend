@@ -4,35 +4,39 @@
 /**
  * Build the portfolio generation prompt with all available data as context.
  */
-export function buildGenerationPrompt(resumeData, githubData, linkedinData) {
+export function buildGenerationPrompt(profileData, githubData, linkedinData) {
     let contextBlock = '';
-    // Resume context
-    contextBlock += `## Resume Data
-Name: ${resumeData.name}
-${resumeData.headline ? `Headline: ${resumeData.headline}` : ''}
-${resumeData.summary ? `Summary: ${resumeData.summary}` : ''}
+    const skills = Array.isArray(profileData.skills) ? profileData.skills : [];
+    const experience = Array.isArray(profileData.experience) ? profileData.experience : [];
+    const education = Array.isArray(profileData.education) ? profileData.education : [];
+    const projects = Array.isArray(profileData.projects) ? profileData.projects : [];
+    const certifications = Array.isArray(profileData.certifications) ? profileData.certifications : [];
+    contextBlock += `## Available Profile Data
+Name: ${profileData.name}
+${profileData.headline ? `Headline: ${profileData.headline}` : ''}
+${profileData.summary ? `Summary: ${profileData.summary}` : ''}
 
 Skills:
-${resumeData.skills.map((s) => `- ${s.category}: ${s.skills.join(', ')}`).join('\n')}
+${skills.length ? skills.map((s) => `- ${s.category}: ${(s.skills ?? []).join(', ')}`).join('\n') : 'No explicit skills provided.'}
 
 Experience:
-${resumeData.experience
+${experience.length ? experience
         .map((e) => `- ${e.position} at ${e.company} (${e.startDate ?? '?'} - ${e.current ? 'Present' : e.endDate ?? '?'})\n  ${e.description}${e.highlights?.length ? '\n  Highlights: ' + e.highlights.join('; ') : ''}${e.technologies?.length ? '\n  Tech: ' + e.technologies.join(', ') : ''}`)
-        .join('\n')}
+        .join('\n') : 'No explicit experience provided.'}
 
 Education:
-${resumeData.education
+${education.length ? education
         .map((e) => `- ${e.degree}${e.field ? ' in ' + e.field : ''} at ${e.institution} (${e.startDate ?? '?'} - ${e.endDate ?? '?'})${e.gpa ? ', GPA: ' + e.gpa : ''}`)
-        .join('\n')}
+        .join('\n') : 'No explicit education provided.'}
 
 Projects:
-${resumeData.projects
+${projects.length ? projects
         .map((p) => `- ${p.title}: ${p.description}${p.technologies?.length ? ' [' + p.technologies.join(', ') + ']' : ''}`)
-        .join('\n')}
+        .join('\n') : 'No explicit projects provided.'}
 
-${resumeData.certifications.length > 0 ? `Certifications:\n${resumeData.certifications.map((c) => `- ${c.name} by ${c.issuer}`).join('\n')}` : ''}
+${certifications.length > 0 ? `Certifications:\n${certifications.map((c) => `- ${c.name} by ${c.issuer}`).join('\n')}` : ''}
 
-Contact: ${JSON.stringify(resumeData.contact)}
+Contact: ${JSON.stringify(profileData.contact ?? {})}
 `;
     // GitHub context
     if (githubData) {
@@ -148,5 +152,6 @@ Rules:
 5. The "about" section should tell a compelling professional story.
 6. Preserve all factual data (dates, company names, school names, etc.) exactly as provided.
 7. If GitHub repos exist that aren't in the resume projects, include the most notable ones (top 3-5 by stars).
-8. Return ONLY the JSON object, no markdown, no code blocks.`;
+8. If a data source is missing, omit that section's items or create editable placeholder copy only when needed for hero/about.
+9. Return ONLY the JSON object, no markdown, no code blocks.`;
 }

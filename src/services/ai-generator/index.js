@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(config.geminiApiKey);
 /**
  * Generate structured portfolio content from user data using Gemini AI.
  */
-export async function generatePortfolioContent(resumeData, githubData, linkedinData) {
+export async function generatePortfolioContent(profileData, githubData, linkedinData) {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
@@ -20,7 +20,7 @@ export async function generatePortfolioContent(resumeData, githubData, linkedinD
                 responseMimeType: 'application/json',
             },
         });
-        const prompt = buildGenerationPrompt(resumeData, githubData, linkedinData);
+        const prompt = buildGenerationPrompt(profileData, githubData, linkedinData);
         const result = await model.generateContent(prompt);
         const response = result.response;
         const text = response.text();
@@ -61,12 +61,12 @@ export async function generatePortfolioContent(resumeData, githubData, linkedinD
                 highlights: parsed.about.highlights ?? [],
                 imageUrl: parsed.about.imageUrl ?? undefined,
             },
-            skills: Array.isArray(parsed.skills) ? parsed.skills : resumeData.skills,
-            projects: Array.isArray(parsed.projects) ? parsed.projects : resumeData.projects,
-            experience: Array.isArray(parsed.experience) ? parsed.experience : resumeData.experience,
-            education: Array.isArray(parsed.education) ? parsed.education : resumeData.education,
-            certifications: Array.isArray(parsed.certifications) ? parsed.certifications : resumeData.certifications,
-            contact: parsed.contact ?? resumeData.contact,
+            skills: Array.isArray(parsed.skills) ? parsed.skills : profileData.skills ?? [],
+            projects: Array.isArray(parsed.projects) ? parsed.projects : profileData.projects ?? [],
+            experience: Array.isArray(parsed.experience) ? parsed.experience : profileData.experience ?? [],
+            education: Array.isArray(parsed.education) ? parsed.education : profileData.education ?? [],
+            certifications: Array.isArray(parsed.certifications) ? parsed.certifications : profileData.certifications ?? [],
+            contact: parsed.contact ?? profileData.contact ?? {},
         };
         return content;
     }

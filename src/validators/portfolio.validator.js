@@ -2,6 +2,14 @@
 // Portfolio Validators — Zod 4 schemas
 // ============================================================================
 import { z } from 'zod';
+const animationSchema = z.object({
+    type: z.enum(['fade', 'rise', 'drop', 'slide', 'slideLeft', 'slideRight', 'scale', 'zoomBlur', 'flip', 'tilt', 'clip', 'blur', 'none']),
+    duration: z.number().optional(),
+    delay: z.number().optional(),
+    distance: z.number().optional(),
+    easing: z.enum(['smooth', 'spring', 'snappy', 'luxury']).optional(),
+    repeatOnScroll: z.boolean().optional(),
+});
 export const createPortfolioSchema = z.object({
     sessionId: z.string().min(1, 'Session ID is required'),
 });
@@ -29,11 +37,7 @@ export const updatePortfolioSchema = z.object({
         title: z.string(),
         visible: z.boolean(),
         order: z.number(),
-        animation: z.object({
-            type: z.enum(['fade', 'slide', 'scale', 'none']),
-            duration: z.number().optional(),
-            delay: z.number().optional(),
-        }),
+        animation: animationSchema,
     }))
         .optional(),
     selectedTemplate: z.string().optional(),
@@ -54,10 +58,6 @@ export const updateSectionsSchema = z.object({
         title: z.string(),
         visible: z.boolean(),
         order: z.number(),
-        animation: z.object({
-            type: z.enum(['fade', 'slide', 'scale', 'none']),
-            duration: z.number().optional(),
-            delay: z.number().optional(),
-        }),
+        animation: animationSchema,
     })),
 });
