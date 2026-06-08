@@ -2,6 +2,29 @@
 // Portfolio Validators — Zod 4 schemas
 // ============================================================================
 import { z } from 'zod';
+import { getAllTemplateIds } from '../shared/template-registry.js';
+
+const SECTION_TYPES = [
+    'hero',
+    'about',
+    'skills',
+    'experience',
+    'projects',
+    'education',
+    'certifications',
+    'contact',
+    'github-stats',
+    'tech-stack',
+    'case-studies',
+    'gallery',
+    'services',
+    'testimonials',
+    'publications',
+    'timeline',
+    'media-showcase',
+    'social-proof',
+];
+const TEMPLATE_IDS = getAllTemplateIds();
 const animationSchema = z.object({
     type: z.enum(['fade', 'rise', 'drop', 'slide', 'slideLeft', 'slideRight', 'scale', 'zoomBlur', 'flip', 'tilt', 'clip', 'blur', 'none']),
     duration: z.number().optional(),
@@ -25,7 +48,7 @@ export const enrichGitHubSchema = z.object({
 });
 export const generatePortfolioSchema = z.object({
     portfolioId: z.string().min(1, 'Portfolio ID is required'),
-    templateId: z.string().optional(),
+    templateId: z.enum(TEMPLATE_IDS).optional(),
 });
 export const updatePortfolioSchema = z.object({
     generatedContent: z.record(z.string(), z.unknown()).optional(),
@@ -33,14 +56,14 @@ export const updatePortfolioSchema = z.object({
     sections: z
         .array(z.object({
         id: z.string(),
-        type: z.enum(['hero', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact']),
+        type: z.enum(SECTION_TYPES),
         title: z.string(),
         visible: z.boolean(),
         order: z.number(),
         animation: animationSchema,
     }))
         .optional(),
-    selectedTemplate: z.string().optional(),
+    selectedTemplate: z.enum(TEMPLATE_IDS).optional(),
     themeMode: z.enum(['light', 'dark', 'auto']).optional(),
     profileImageUrl: z.string().optional(),
     linkedinData: z
@@ -54,7 +77,7 @@ export const updatePortfolioSchema = z.object({
 export const updateSectionsSchema = z.object({
     sections: z.array(z.object({
         id: z.string(),
-        type: z.enum(['hero', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact']),
+        type: z.enum(SECTION_TYPES),
         title: z.string(),
         visible: z.boolean(),
         order: z.number(),

@@ -6,10 +6,96 @@ import { config } from '../../config/index.js';
 import { buildGenerationPrompt } from './prompts.js';
 import { ServiceError } from '../../types/index.js';
 const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+
+function normalizeSocialProof(items) {
+    const base = { clients: [], metrics: [], press: [], awards: [] };
+    if (Array.isArray(items)) {
+        for (const item of items) {
+            if (!item || typeof item !== 'object') {
+                continue;
+            }
+            switch (item.type) {
+                case 'metric':
+                    base.metrics.push({
+                        label: item.name ?? 'Metric',
+                        value: item.value ?? '',
+                    });
+                    break;
+                case 'press':
+                    base.press.push({
+                        title: item.name ?? 'Press mention',
+                        source: item.value ?? '',
+                        url: item.url,
+                    });
+                    break;
+                case 'award':
+                    base.awards.push({
+                        title: item.name ?? 'Award',
+                        year: item.value ?? '',
+                    });
+                    break;
+                default:
+                    base.clients.push({
+                        name: item.name ?? 'Client',
+                        logoUrl: item.logoUrl,
+                    });
+                    break;
+            }
+        }
+        return base;
+    }
+    if (items && typeof items === 'object') {
+        return {
+            clients: Array.isArray(items.clients) ? items.clients : [],
+            metrics: Array.isArray(items.metrics) ? items.metrics : [],
+            press: Array.isArray(items.press) ? items.press : [],
+            awards: Array.isArray(items.awards) ? items.awards : [],
+        };
+    }
+    return base;
+}
+
+function normalizeCaseStudies(items) {
+    if (!Array.isArray(items)) {
+        return [];
+    }
+    return items.map((item, index) => ({
+        id: item?.id ?? `case-study-${index + 1}`,
+        title: item?.title ?? `Case Study ${index + 1}`,
+        problem: item?.problem ?? '',
+        solution: item?.solution ?? item?.process ?? '',
+        outcome: item?.outcome ?? '',
+        imageUrl: item?.imageUrl,
+        process: Array.isArray(item?.process)
+            ? item.process
+            : typeof item?.process === 'string' && item.process.trim()
+                ? [item.process.trim()]
+                : [],
+        tools: Array.isArray(item?.tools)
+            ? item.tools
+            : Array.isArray(item?.technologies)
+                ? item.technologies
+                : [],
+        role: item?.role,
+        url: item?.url,
+    }));
+}
+
+function buildGitHubStats(githubData) {
+    if (!githubData) {
+        return undefined;
+    }
+    return {
+        totalStars: githubData.totalStars ?? 0,
+        totalContributions: githubData.totalContributions ?? 0,
+        languages: githubData.languages ?? {},
+        repos: Array.isArray(githubData.repos) ? githubData.repos : [],
+    };
+}
 /**
  * Generate structured portfolio content from user data using Gemini AI.
  */
-export async function generatePortfolioContent(profileData, githubData, linkedinData) {
+export async function generatePortfolioContent(profileData, githubData, linkedinData, options = {}) {
     try {
         const model = genAI.getGenerativeModel({
             model: "gemini-2.5-flash",
@@ -20,7 +106,7 @@ export async function generatePortfolioContent(profileData, githubData, linkedin
                 responseMimeType: 'application/json',
             },
         });
-        const prompt = buildGenerationPrompt(profileData, githubData, linkedinData);
+        const prompt = buildGenerationPrompt(profileData, githubData, linkedinData, options);
         const result = await model.generateContent(prompt);
         const response = result.response;
         const text = response.text();
@@ -67,6 +153,15 @@ export async function generatePortfolioContent(profileData, githubData, linkedin
             education: Array.isArray(parsed.education) ? parsed.education : profileData.education ?? [],
             certifications: Array.isArray(parsed.certifications) ? parsed.certifications : profileData.certifications ?? [],
             contact: parsed.contact ?? profileData.contact ?? {},
+            githubStats: parsed.githubStats ?? buildGitHubStats(githubData),
+            services: Array.isArray(parsed.services) ? parsed.services : [],
+            testimonials: Array.isArray(parsed.testimonials) ? parsed.testimonials : [],
+            publications: Array.isArray(parsed.publications) ? parsed.publications : [],
+            timeline: Array.isArray(parsed.timeline) ? parsed.timeline : [],
+            gallery: Array.isArray(parsed.gallery) ? parsed.gallery : [],
+            mediaShowcase: Array.isArray(parsed.mediaShowcase) ? parsed.mediaShowcase : [],
+            caseStudies: normalizeCaseStudies(parsed.caseStudies),
+            socialProof: normalizeSocialProof(parsed.socialProof),
         };
         return content;
     }

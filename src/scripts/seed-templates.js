@@ -1,98 +1,79 @@
 // ============================================================================
-// Seed Templates — Populate default template documents
+// Seed Templates - populate template documents from the shared registry
 // ============================================================================
+
 import { connectDatabase, disconnectDatabase } from '../config/database.js';
 import { TemplateRepository } from '../repositories/template.repository.js';
-import { TEMPLATE_COLORS, TEMPLATE_TYPOGRAPHY } from '../shared/template.js';
-const TEMPLATE_DEFINITIONS = [
-    {
-        templateId: 'notion',
-        name: 'Notion Style',
-        description: 'Clean, blocky layout inspired by Notion. Monochrome with blue accents.',
-        thumbnail: '/templates/notion.png',
-        category: 'minimal',
-    },
-    {
-        templateId: 'minimal',
-        name: 'Minimal',
-        description: 'Maximum whitespace with thin typography and floating cards.',
-        thumbnail: '/templates/minimal.png',
-        category: 'minimal',
-    },
-    {
-        templateId: 'developer',
-        name: 'Developer',
-        description: 'Terminal-inspired with monospace headings and green accents.',
-        thumbnail: '/templates/developer.png',
-        category: 'professional',
-    },
-    {
-        templateId: 'modern',
-        name: 'Modern Professional',
-        description: 'Bold headings with gradient accents and card-based layout.',
-        thumbnail: '/templates/modern.png',
-        category: 'professional',
-    },
-    {
-        templateId: 'creative',
-        name: 'Creative Portfolio',
-        description: 'Asymmetric grids with serif headings and warm amber accents.',
-        thumbnail: '/templates/creative.png',
-        category: 'creative',
-    },
-    {
-        templateId: 'editorial',
-        name: 'Editorial Split',
-        description: 'Magazine-like spacing, refined contrast, and structured content flow.',
-        thumbnail: '/templates/editorial.png',
-        category: 'creative',
-    },
-    {
-        templateId: 'neon',
-        name: 'Neon Lab',
-        description: 'High-contrast tech style with vivid cyan accents and sharp panels.',
-        thumbnail: '/templates/neon.png',
-        category: 'developer',
-    },
-    {
-        templateId: 'executive',
-        name: 'Executive Brief',
-        description: 'Premium resume-style portfolio with quiet luxury and dense readability.',
-        thumbnail: '/templates/executive.png',
-        category: 'professional',
-    },
-];
-function buildDefaultDesign(templateId) {
+import { LEGACY_TEMPLATE_MAP, TEMPLATE_REGISTRY, TEMPLATE_FAMILIES } from '../shared/template-registry.js';
+
+const FAMILY_CATEGORY_MAP = {
+    developer: 'developer',
+    student: 'professional',
+    'uiux-designer': 'creative',
+    'graphic-designer': 'creative',
+    freelancer: 'business',
+    founder: 'business',
+    photographer: 'media',
+    'content-creator': 'media',
+    researcher: 'academic',
+    hybrid: 'professional',
+};
+
+function buildDefaultDesign(config) {
     return {
-        colors: TEMPLATE_COLORS[templateId].light,
-        typography: TEMPLATE_TYPOGRAPHY[templateId],
-        spacing: {
-            sectionPadding: 64,
-            contentMaxWidth: templateId === 'creative' || templateId === 'editorial' ? 1100 : templateId === 'executive' ? 1040 : 960,
-            cardGap: templateId === 'executive' ? 18 : 24,
-        },
-        borderShadow: {
-            borderRadius: templateId === 'notion' || templateId === 'neon' ? 8 : templateId === 'executive' ? 6 : 12,
-            borderWidth: templateId === 'neon' ? 2 : 1,
-            shadowIntensity: templateId === 'minimal' || templateId === 'executive' ? 'subtle' : 'medium',
-        },
+        colors: config.colors.light,
+        typography: { ...config.typography },
+        spacing: { ...config.spacing },
+        borderShadow: { ...config.borderShadow },
         animations: {},
     };
 }
+
 async function seed() {
     await connectDatabase();
-    for (const def of TEMPLATE_DEFINITIONS) {
-        await TemplateRepository.upsertByTemplateId(def.templateId, {
-            ...def,
-            defaultDesign: buildDefaultDesign(def.templateId),
+
+    for (const config of Object.values(TEMPLATE_REGISTRY)) {
+        const familyMeta = TEMPLATE_FAMILIES.find((family) => family.id === config.family);
+        await TemplateRepository.upsertByTemplateId(config.id, {
+            templateId: config.id,
+            name: config.name,
+            description: config.description,
+            thumbnail: `/templates/${config.id}.png`,
+            family: config.family,
+            category: FAMILY_CATEGORY_MAP[config.family] ?? 'professional',
+            targetAudience: familyMeta?.targetAudience ?? [],
+            animationLevel: config.animationLevel,
+            defaultSections: config.defaultSections,
+            defaultDesign: buildDefaultDesign(config),
             isActive: true,
         });
-        console.log(`✅ Seeded template: ${def.name}`);
+        console.log(`Seeded template: ${config.id}`);
     }
-    console.log('\n🎉 Template seeding complete');
+
+    for (const [legacyId, mappedId] of Object.entries(LEGACY_TEMPLATE_MAP)) {
+        const config = TEMPLATE_REGISTRY[mappedId];
+        const familyMeta = TEMPLATE_FAMILIES.find((family) => family.id === config.family);
+        await TemplateRepository.upsertByTemplateId(legacyId, {
+            templateId: legacyId,
+            name: `${config.name} (Legacy)`,
+            description: `Legacy alias for ${mappedId}.`,
+            thumbnail: `/templates/${mappedId}.png`,
+            family: config.family,
+            category: FAMILY_CATEGORY_MAP[config.family] ?? 'professional',
+            targetAudience: familyMeta?.targetAudience ?? [],
+            animationLevel: config.animationLevel,
+            defaultSections: config.defaultSections,
+            defaultDesign: buildDefaultDesign(config),
+            isActive: true,
+        });
+        console.log(`Seeded legacy alias: ${legacyId} -> ${mappedId}`);
+    }
+
+    console.log('\nTemplate seeding complete');
     await disconnectDatabase();
 }
+
 seed().catch((err) => {
-    console.error('❌ Seed failed:', err);
+    console.error('Seed failed:', err);
     process.exit(1);
 });

@@ -105,6 +105,67 @@ const AboutContentSchema = new Schema({
     highlights: [{ type: String }],
     imageUrl: { type: String },
 }, { _id: false });
+const ServiceEntrySchema = new Schema({
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    icon: { type: String },
+    price: { type: String },
+}, { _id: false });
+const TestimonialEntrySchema = new Schema({
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    company: { type: String },
+    role: { type: String },
+    quote: { type: String, required: true },
+    avatarUrl: { type: String },
+}, { _id: false });
+const PublicationEntrySchema = new Schema({
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    journal: { type: String },
+    year: { type: String },
+    coAuthors: [{ type: String }],
+    url: { type: String },
+    citations: { type: Number },
+}, { _id: false });
+const TimelineEntrySchema = new Schema({
+    id: { type: String, required: true },
+    date: { type: String, required: true },
+    title: { type: String, required: true },
+    description: { type: String },
+    icon: { type: String },
+}, { _id: false });
+const GalleryItemSchema = new Schema({
+    id: { type: String, required: true },
+    imageUrl: { type: String, required: true },
+    title: { type: String },
+    category: { type: String },
+}, { _id: false });
+const MediaItemSchema = new Schema({
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    type: { type: String, enum: ['video', 'podcast', 'blog'], default: 'video' },
+    url: { type: String },
+    thumbnailUrl: { type: String },
+    description: { type: String },
+}, { _id: false });
+const CaseStudyEntrySchema = new Schema({
+    id: { type: String, required: true },
+    title: { type: String, required: true },
+    problem: { type: String },
+    process: { type: String },
+    outcome: { type: String },
+    imageUrl: { type: String },
+    technologies: [{ type: String }],
+}, { _id: false });
+const SocialProofEntrySchema = new Schema({
+    id: { type: String, required: true },
+    type: { type: String, enum: ['client', 'award', 'press', 'metric'], default: 'client' },
+    name: { type: String, required: true },
+    logoUrl: { type: String },
+    value: { type: String },
+}, { _id: false });
 const GeneratedContentSchema = new Schema({
     hero: { type: HeroContentSchema, required: true },
     about: { type: AboutContentSchema, required: true },
@@ -114,6 +175,15 @@ const GeneratedContentSchema = new Schema({
     education: [EducationEntrySchema],
     certifications: [CertificationEntrySchema],
     contact: { type: ContactInfoSchema, default: {} },
+    // New section content types
+    services: [ServiceEntrySchema],
+    testimonials: [TestimonialEntrySchema],
+    publications: [PublicationEntrySchema],
+    timeline: [TimelineEntrySchema],
+    gallery: [GalleryItemSchema],
+    mediaShowcase: [MediaItemSchema],
+    caseStudies: [CaseStudyEntrySchema],
+    socialProof: [SocialProofEntrySchema],
 }, { _id: false });
 const ColorSettingsSchema = new Schema({
     primary: { type: String, required: true },
@@ -167,7 +237,11 @@ const SectionConfigSchema = new Schema({
     id: { type: String, required: true },
     type: {
         type: String,
-        enum: ['hero', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact'],
+        enum: [
+            'hero', 'about', 'skills', 'experience', 'projects', 'education', 'certifications', 'contact',
+            'github-stats', 'tech-stack', 'case-studies', 'gallery', 'services', 'testimonials',
+            'publications', 'timeline', 'media-showcase', 'social-proof',
+        ],
         required: true,
     },
     title: { type: String, required: true },
@@ -181,7 +255,12 @@ const PortfolioSchema = new Schema({
     githubData: { type: GitHubDataSchema, default: null },
     linkedinData: { type: LinkedInDataSchema, default: null },
     generatedContent: { type: GeneratedContentSchema, default: null },
-    selectedTemplate: { type: String, default: 'minimal' },
+    selectedTemplate: { type: String, default: 'dev-minimal' },
+    templateFamily: { type: String },
+    professionalCategory: {
+        type: String,
+        enum: ['developer', 'student', 'uiux-designer', 'graphic-designer', 'freelancer', 'founder', 'photographer', 'content-creator', 'researcher', 'hybrid'],
+    },
     designSettings: { type: DesignSettingsSchema, default: null },
     sections: { type: [SectionConfigSchema], default: [] },
     themeMode: { type: String, enum: ['light', 'dark', 'auto'], default: 'light' },

@@ -44,16 +44,39 @@ const TemplateSchema = new Schema({
         required: true,
         unique: true,
         index: true,
-        enum: ['notion', 'minimal', 'developer', 'modern', 'creative', 'editorial', 'neon', 'executive'],
+        enum: [
+            // New template IDs
+            'dev-terminal', 'dev-minimal',
+            'student-modern', 'student-campus',
+            'designer-casestudy', 'designer-showcase',
+            'graphic-masonry', 'graphic-spotlight',
+            'freelancer-convert', 'freelancer-agency',
+            'founder-executive', 'founder-timeline',
+            'photo-gallery', 'photo-story',
+            'creator-media', 'creator-hub',
+            'researcher-academic', 'researcher-modern',
+            'hybrid-flex',
+            // Legacy template IDs (backward compat)
+            'notion', 'minimal', 'developer', 'modern', 'creative', 'editorial', 'neon', 'executive',
+        ],
     },
     name: { type: String, required: true },
     description: { type: String, required: true },
-    thumbnail: { type: String, required: true },
+    thumbnail: { type: String },
+    family: {
+        type: String,
+        enum: ['developer', 'student', 'uiux-designer', 'graphic-designer', 'freelancer', 'founder', 'photographer', 'content-creator', 'researcher', 'hybrid'],
+    },
     category: {
         type: String,
-        required: true,
-        enum: ['minimal', 'professional', 'creative', 'developer'],
+        enum: ['minimal', 'professional', 'creative', 'developer', 'academic', 'business', 'media'],
     },
+    targetAudience: [{ type: String }],
+    animationLevel: {
+        type: String,
+        enum: ['very-low', 'low', 'medium', 'medium-high', 'high'],
+    },
+    defaultSections: [{ type: String }],
     defaultDesign: { type: DesignSettingsSchema, required: true },
     isActive: { type: Boolean, default: true },
 }, {

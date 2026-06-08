@@ -3,6 +3,7 @@
 // ============================================================================
 import { getParam } from '../../utils/params.js';
 import * as portfolioService from '../../services/portfolio/index.js';
+import { generateCustomTemplate as generateCustomTemplateService } from '../../services/custom-template-generator/index.js';
 import { createPortfolioSchema, enrichGitHubSchema, generatePortfolioSchema, updatePortfolioSchema, updateSectionsSchema, } from '../../validators/portfolio.validator.js';
 /**
  * POST /api/portfolio/create
@@ -138,6 +139,46 @@ export async function updateSections(req, res, next) {
             success: true,
             data: portfolio.toObject(),
             message: 'Sections updated successfully',
+        };
+        res.status(200).json(response);
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * POST /api/portfolio/:id/classify
+ */
+export async function classifyProfile(req, res, next) {
+    try {
+        const id = getParam(req.params.id);
+        const result = await portfolioService.classifyPortfolioProfile(id);
+        const response = {
+            success: true,
+            data: result,
+            message: 'Profile classified successfully',
+        };
+        res.status(200).json(response);
+    }
+    catch (error) {
+        next(error);
+    }
+}
+/**
+ * POST /api/portfolio/generate-custom-template
+ */
+export async function generateCustomTemplateHandler(req, res, next) {
+    try {
+        const { prompt } = req.body;
+        if (!prompt || typeof prompt !== 'string') {
+            res.status(400).json({ success: false, error: 'prompt is required' });
+            return;
+        }
+        const result = await generateCustomTemplateService(prompt);
+        const response = {
+            success: true,
+            data: result,
+            message: 'Custom template generated successfully',
         };
         res.status(200).json(response);
     }

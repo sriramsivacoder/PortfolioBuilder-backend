@@ -7,29 +7,54 @@ import { TemplateRepository } from '../../repositories/template.repository.js';
 import { parseResume } from '../resume-parser/index.js';
 import { fetchGitHubProfile } from '../github/index.js';
 import { generatePortfolioContent } from '../ai-generator/index.js';
+import { classifyProfile } from '../profile-classifier/index.js';
 import { ServiceError } from '../../types/index.js';
+import { getDefaultSectionsForTemplate, getTemplateConfig } from '../../shared/template-registry.js';
+
+const SECTION_TITLES = {
+    hero: 'Hero',
+    about: 'About',
+    skills: 'Skills',
+    experience: 'Experience',
+    projects: 'Projects',
+    education: 'Education',
+    certifications: 'Certifications',
+    contact: 'Contact',
+    'github-stats': 'GitHub Stats',
+    'tech-stack': 'Tech Stack',
+    'case-studies': 'Case Studies',
+    gallery: 'Gallery',
+    services: 'Services',
+    testimonials: 'Testimonials',
+    publications: 'Publications',
+    timeline: 'Timeline',
+    'media-showcase': 'Media Showcase',
+    'social-proof': 'Social Proof',
+};
 /**
  * Default sections created for a new portfolio.
  */
-function createDefaultSections() {
-    const sectionTypes = [
-        { type: 'hero', title: 'Hero' },
-        { type: 'about', title: 'About Me' },
-        { type: 'skills', title: 'Skills' },
-        { type: 'experience', title: 'Experience' },
-        { type: 'projects', title: 'Projects' },
-        { type: 'education', title: 'Education' },
-        { type: 'certifications', title: 'Certifications' },
-        { type: 'contact', title: 'Contact' },
-    ];
-    return sectionTypes.map((s, index) => ({
+function createDefaultSections(templateId = 'dev-minimal') {
+    const sectionTypes = getDefaultSectionsForTemplate(templateId);
+    return sectionTypes.map((type, index) => ({
         id: uuidv4(),
-        type: s.type,
-        title: s.title,
+        type,
+        title: SECTION_TITLES[type] ?? type,
         visible: true,
         order: index,
         animation: { type: 'rise', duration: 650, delay: index * 60, distance: 28, easing: 'smooth', repeatOnScroll: false },
     }));
+}
+
+function buildDefaultDesignFromRegistry(templateId) {
+    const config = getTemplateConfig(templateId);
+    return {
+        colors: config.colors.light,
+        typography: { ...config.typography },
+        spacing: { ...config.spacing },
+        borderShadow: { ...config.borderShadow },
+        animations: {},
+    };
 }
 function createEmptySourceData(portfolio) {
     const github = portfolio.githubData;
@@ -136,13 +161,14 @@ function createStarterContent(portfolio) {
 export async function createPortfolio(sessionId) {
     try {
         // Get default template design
-        const defaultTemplate = await TemplateRepository.findByTemplateId('minimal');
-        const designSettings = defaultTemplate?.defaultDesign ?? null;
+        const defaultTemplate = await TemplateRepository.findByTemplateId('dev-minimal');
+        const designSettings = defaultTemplate?.defaultDesign ?? buildDefaultDesignFromRegistry('dev-minimal');
         const portfolio = await PortfolioRepository.create({
             sessionId,
-            selectedTemplate: 'minimal',
+            selectedTemplate: 'dev-minimal',
+            templateFamily: getTemplateConfig('dev-minimal').family,
             designSettings: designSettings,
-            sections: createDefaultSections(),
+            sections: createDefaultSections('dev-minimal'),
             themeMode: 'light',
             status: 'draft',
         });
@@ -223,16 +249,28 @@ export async function enrichWithGitHub(portfolioId, githubUrl) {
 export async function generateContent(portfolioId, templateId) {
     try {
         const portfolio = await getPortfolio(portfolioId);
+        let resolvedTemplateId = portfolio.selectedTemplate ?? 'dev-minimal';
+        let templateConfig = getTemplateConfig(resolvedTemplateId);
         // If a template is specified, update the portfolio template and design
         if (templateId) {
-            const template = await TemplateRepository.findByTemplateId(templateId);
-            if (template) {
-                await PortfolioRepository.updateTemplate(portfolioId, templateId, template.defaultDesign);
-            }
+            templateConfig = getTemplateConfig(templateId);
+            resolvedTemplateId = templateConfig.id;
+            const template = await TemplateRepository.findByTemplateId(resolvedTemplateId);
+            await PortfolioRepository.update(portfolioId, {
+                selectedTemplate: resolvedTemplateId,
+                templateFamily: templateConfig.family,
+                designSettings: template?.defaultDesign ?? buildDefaultDesignFromRegistry(resolvedTemplateId),
+                sections: createDefaultSections(resolvedTemplateId),
+            });
         }
         const sourceData = buildSourceData(portfolio);
+        const sectionTypes = getDefaultSectionsForTemplate(resolvedTemplateId);
         const content = hasUsableSource(portfolio)
-            ? await generatePortfolioContent(sourceData, portfolio.githubData, portfolio.linkedinData)
+            ? await generatePortfolioContent(sourceData, portfolio.githubData, portfolio.linkedinData, {
+                professionalCategory: portfolio.professionalCategory ?? templateConfig.family,
+                templateFamily: templateConfig.family,
+                sectionTypes,
+            })
             : createStarterContent(portfolio);
         // Update the portfolio with generated content
         await PortfolioRepository.updateGeneratedContent(portfolioId, content);
@@ -256,7 +294,11 @@ export async function generateContent(portfolioId, templateId) {
 export async function updatePortfolio(portfolioId, updates) {
     try {
         await getPortfolio(portfolioId); // Verify exists
-        const updated = await PortfolioRepository.update(portfolioId, updates);
+        const nextUpdates = { ...updates };
+        if (nextUpdates.selectedTemplate) {
+            nextUpdates.templateFamily = getTemplateConfig(nextUpdates.selectedTemplate).family;
+        }
+        const updated = await PortfolioRepository.update(portfolioId, nextUpdates);
         if (!updated) {
             throw new ServiceError('Failed to update portfolio', 500);
         }
@@ -286,5 +328,32 @@ export async function updateSections(portfolioId, sections) {
             throw error;
         const message = error instanceof Error ? error.message : 'Unknown error';
         throw new ServiceError(`Failed to update sections: ${message}`, 500);
+    }
+}
+
+/**
+ * Classify a portfolio's professional category based on available data.
+ */
+export async function classifyPortfolioProfile(portfolioId) {
+    try {
+        const portfolio = await getPortfolio(portfolioId);
+        const resumeData = portfolio.resumeData?.toObject?.() ?? portfolio.resumeData ?? null;
+        const githubData = portfolio.githubData?.toObject?.() ?? portfolio.githubData ?? null;
+        const linkedinData = portfolio.linkedinData?.toObject?.() ?? portfolio.linkedinData ?? null;
+
+        const result = classifyProfile({ resumeData, githubData, linkedinData });
+
+        // Update portfolio with classification
+        await PortfolioRepository.update(portfolioId, {
+            professionalCategory: result.primaryCategory,
+            templateFamily: result.primaryCategory,
+        });
+
+        return result;
+    }
+    catch (error) {
+        if (error instanceof ServiceError) throw error;
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        throw new ServiceError(`Failed to classify profile: ${message}`, 500);
     }
 }
